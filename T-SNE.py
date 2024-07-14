@@ -23,8 +23,8 @@ def prepro_multi(mat_dis):
     embed = data['r_img']
     label = data['r_l']
     label = label.astype('int')
-    result = [Counter(label[i, :]).most_common(1)[0] for i in range(embed.shape[0])]  # 多标签数据中挑单标签样本
-    ind = []  # 索引
+    result = [Counter(label[i, :]).most_common(1)[0] for i in range(embed.shape[0])]
+    ind = []
     for i in range(embed.shape[0]):
         for j in range(2):
             if result[i][j] >= label.shape[1] - 1:
@@ -37,7 +37,6 @@ def prepro_multi(mat_dis):
 
     embed_ = np.array(embed_)
     label_ = np.argmax(np.array(label_), 1)
-    # label_ = label.argmax(axis=1)
     l_num = len(list(set(label_)))
     return embed_, label_, l_num
 
@@ -62,11 +61,11 @@ def calc(args, index, choice, noise_list=None):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="32-ours-coco-i2t-0.7305.mat")
+    parser.add_argument("--data_dir", type=str, default="filename.mat")
     parser.add_argument("--save_dir", type=str, default="./")
 
     parser.add_argument("--class_num", type=int, default=8, help="classes num for print need")
-    parser.add_argument("--choice", type=bool, default=False)
+    parser.add_argument("--choice", type=bool, default=False, help="choice similar embedding point")
     parser.add_argument("--point_num", type=int, default=500, help="point for print need")
     parser.add_argument("--noise_num", type=str, default=20, help="noise point for print need")
 
@@ -76,35 +75,35 @@ def get_args():
 
 def main():
     args = get_args()
-    embed, label, lnum = prepro_multi(args.data_dir)        # 抽取特定点
+    embed, label, lnum = prepro_multi(args.data_dir)
 
     x, y = [], []
     count = 0
-    for i in range(lnum):     # 遍历每个类别
-        label_list, index_list, embed_list = [], [], []     # 分别记录属于该类的样本标签,索引,特征
-        for j in range(len(label)):    # 对于每个类别遍历所有样本
+    for i in range(lnum):
+        label_list, index_list, embed_list = [], [], []
+        for j in range(len(label)):
             if label[j] == i:
-                label_list.append(label[j])     # 记录该样本的标签
-                index_list.append(j)            # 记录该样本的索引
-                embed_list.append(embed[j])     # 记录该样本的特征
+                label_list.append(label[j])
+                index_list.append(j)
+                embed_list.append(embed[j])
         if len(index_list) < args.noise_num:
-            continue                            # 如果该类的单标签样本点数量不足则抛弃
+            continue
         if args.choice:
-            embed_choice, embed_noise = [], []      # 选取统一点和杂点
-            for j in range(len(embed_list)):        # 统计类别中哈希码相同的个数
+            embed_choice, embed_noise = [], []
+            for j in range(len(embed_list)):
                 if (embed_list[j] == embed_list[0]).all():
                     embed_choice.append(embed_list[j])
                 else:
-                    embed_noise.append(embed_list[j])   # 否则记为杂点
+                    embed_noise.append(embed_list[j])
             embed_choice = np.array(embed_choice)
             embed_noise = np.array(embed_noise)
             x_, y_ = calc(args, count, embed_choice, embed_noise)
-        else:                                       # 否则全部选上
+        else:
             x_, y_ = calc(args, count, embed_list)
         x.append(x_)
         y.append(y_)
         count += 1
-        if args.class_num != -1 and count >= args.class_num:    # class_num=-1时选择所有可用类
+        if args.class_num != -1 and count >= args.class_num:
             break
 
     x = np.concatenate(([*x]), axis=0)
